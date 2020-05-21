@@ -454,19 +454,5 @@ namespace SekiroFpsUnlockAndMore
         internal const int PATTERN_TIMESCALE_POINTER3_OFFSET = 0x1FF8;
         internal const int PATTERN_TIMESCALE_POINTER4_OFFSET = 0x0028;
         internal const int PATTERN_TIMESCALE_POINTER5_OFFSET = 0x0D00;
-
-
-        /**
-            Instead of decrementing entity health, the game stores the post-damage vitality in an EAX register and is moved into an offset from player character base.
-            By simply disabling the subroutine that enables the move, we effectively make everyone immortal.
-            "sekiro.exe"+BBFA68 | 48 0F 4F C1               |  cmovg rax,rcx
-            "sekiro.exe"+BBFA6C | 8B 00                     |  mov eax,[rax]
-            "sekiro.exe"+BBFA6E | 89 83 30 01 00 00         |  mov [rbx+00000130],eax                               | If we move 0, this is effectively instant kill for everyone who attacks.
-         */
-        // (Version 1.4.0.0)
-        internal const string PATTERN_PARRYMODE = "48 ?? ?? ?? 8B ?? 89 ?? ?? ?? 00 00 85 C0 7F";
-        internal const int PATTERN_PARRYMODE_OFFSET = 6;
-        internal const int PATCH_PARRYMODE_INSTRUCTION_LENGTH = 6;
-        internal static readonly byte[] PATCH_PARRYMODE_ENABLE = new byte[6] { 0x90, 0x90, 0x90, 0x90, 0x90, 0x90 }; // nop;
     }
 }

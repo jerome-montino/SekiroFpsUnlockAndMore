@@ -34,12 +34,10 @@ namespace SekiroFpsUnlockAndMore
         internal long _offset_deathpenalties1 = 0x0;
         internal long _offset_deathpenalties2 = 0x0;
         internal long _offset_deathscounter_routine = 0x0;
-        internal long _offset_parrymode = 0x0;
         internal long _offset_timescale = 0x0;
         internal long _offset_timescale_player = 0x0;
         internal long _offset_timescale_player_pointer_start = 0x0;
 
-        internal byte[] _patch_parrymode_disable;
         internal byte[] _patch_deathpenalties1_enable;
         internal byte[] _patch_deathpenalties2_enable;
 
@@ -124,7 +122,7 @@ namespace SekiroFpsUnlockAndMore
                 this.sbInput.Text = _settingsService.ApplicationSettings.peasantInput ? "Controller" : "Mouse";
 
             IntPtr hWnd = new WindowInteropHelper(this).Handle;
-            if (!RegisterHotKey(hWnd, 9009, MOD_CONTROL, VK_M) || !RegisterHotKey(hWnd, 9010, MOD_CONTROL, VK_P) || !RegisterHotKey(hWnd, 9011, MOD_CONTROL, VK_L))
+            if (!RegisterHotKey(hWnd, 9009, MOD_CONTROL, VK_M) || !RegisterHotKey(hWnd, 9010, MOD_CONTROL, VK_P))
                 MessageBox.Show("A Hotkey is already in use, it may not work.", "Sekiro FPS Unlocker and more", MessageBoxButton.OK, MessageBoxImage.Warning);
 
             ComponentDispatcher.ThreadFilterMessage += new ThreadMessageEventHandler(ComponentDispatcherThreadFilterMessage);
@@ -166,7 +164,6 @@ namespace SekiroFpsUnlockAndMore
             IntPtr hWnd = new WindowInteropHelper(this).Handle;
             UnregisterHotKey(hWnd, 9009);
             UnregisterHotKey(hWnd, 9010);
-            UnregisterHotKey(hWnd, 9011);
             if (_gameAccessHwnd != IntPtr.Zero)
                 CloseHandle(_gameAccessHwnd);
         }
@@ -200,14 +197,6 @@ namespace SekiroFpsUnlockAndMore
                 handled = true;
                 PatchGame();
             }
-            else if (msg.wParam.ToInt32() == 9011) // parry mode
-            {
-                if (this.cbParryMode.IsEnabled)
-                {
-                    this.cbParryMode.IsChecked = !this.cbParryMode.IsChecked;
-                }
-                PatchParryMode();
-            }
         }
 
         /// <summary>
@@ -234,7 +223,6 @@ namespace SekiroFpsUnlockAndMore
             this.cbDragonrot.IsChecked = _settingsService.ApplicationSettings.cbDragonrot;
             this.cbDeathPenalty.IsChecked = _settingsService.ApplicationSettings.cbDeathPenalty;
             this.cbDeathPenaltyHidden.Visibility = _settingsService.ApplicationSettings.hiddenDPs == ZUH_HIDDEN_DP ? Visibility.Visible : Visibility.Collapsed;
-            this.cbParryMode.IsChecked = _settingsService.ApplicationSettings.cbParryMode;
             if (_settingsService.ApplicationSettings.hiddenDPs == ZUH_HIDDEN_DP) { _debugMode = true; sbMode.Text = "DEBUG"; }
             this.cbEmblemUpgrade.IsChecked = _settingsService.ApplicationSettings.cbEmblemUpgrade;
             this.cbGameSpeed.IsChecked = _settingsService.ApplicationSettings.cbGameSpeed;
@@ -265,7 +253,6 @@ namespace SekiroFpsUnlockAndMore
             _settingsService.ApplicationSettings.cbAutoLoot = this.cbAutoLoot.IsChecked == true;
             _settingsService.ApplicationSettings.cbDragonrot = this.cbDragonrot.IsChecked == true;
             _settingsService.ApplicationSettings.cbDeathPenalty = this.cbDeathPenalty.IsChecked == true;
-            _settingsService.ApplicationSettings.cbParryMode = this.cbParryMode.IsChecked == true;
             _settingsService.ApplicationSettings.cbEmblemUpgrade = this.cbEmblemUpgrade.IsChecked == true;
             _settingsService.ApplicationSettings.cbGameSpeed = this.cbGameSpeed.IsChecked == true;
             _settingsService.ApplicationSettings.tbGameSpeed = this.tbGameSpeed.Text != "" && !this.tbGameSpeed.Text.Contains(" ") ? Convert.ToInt32(this.tbGameSpeed.Text) : 100;
@@ -297,7 +284,6 @@ namespace SekiroFpsUnlockAndMore
             this.cbDragonrot.IsChecked = false;
             this.cbDeathPenalty.IsChecked = false;
             this.cbDeathPenaltyHidden.Visibility = Visibility.Collapsed;
-            this.cbParryMode.IsChecked = false;
             this.cbEmblemUpgrade.IsChecked = false;
             this.cbGameSpeed.IsChecked = false;
             this.tbGameSpeed.Text = "100";
@@ -524,24 +510,6 @@ namespace SekiroFpsUnlockAndMore
             if (!IsValidAddress(_offset_dragonrot_routine))
                 _offset_dragonrot_routine = 0x0;
 
-            _offset_parrymode = patternScan.FindPattern(GameData.PATTERN_PARRYMODE) + GameData.PATTERN_PARRYMODE_OFFSET;
-            Debug.WriteLine("lpParryMode found at: 0x" + _offset_parrymode.ToString("X"));
-            if (IsValidAddress(_offset_parrymode))
-            {
-                _patch_parrymode_disable = new byte[GameData.PATCH_PARRYMODE_INSTRUCTION_LENGTH];
-                if (!ReadProcessMemory(_gameAccessHwnd, _offset_parrymode, _patch_parrymode_disable, (ulong)GameData.PATCH_PARRYMODE_INSTRUCTION_LENGTH, out IntPtr lpNumberOfBytesRead) || lpNumberOfBytesRead.ToInt32() != GameData.PATCH_PARRYMODE_INSTRUCTION_LENGTH)
-                {
-                    _patch_parrymode_disable = null;
-                }
-                else
-                {
-                    ReadProcessMemory(_gameAccessHwnd, _offset_parrymode, _patch_parrymode_disable, (ulong)GameData.PATCH_PARRYMODE_INSTRUCTION_LENGTH, out _);
-                    Debug.WriteLine("ParryMode original instruction set: " + BitConverter.ToString(_patch_parrymode_disable).Replace('-', ' '));
-                }
-            }
-            if (!IsValidAddress(_offset_parrymode))
-                _offset_parrymode = 0x0;
-
             _offset_deathpenalties1 = patternScan.FindPattern(GameData.PATTERN_DEATHPENALTIES1) + GameData.PATTERN_DEATHPENALTIES1_OFFSET;
             Debug.WriteLine("lpDeathPenalties1 found at: 0x" + _offset_deathpenalties1.ToString("X"));
             if (IsValidAddress(_offset_deathpenalties1))
@@ -730,13 +698,6 @@ namespace SekiroFpsUnlockAndMore
                 this.cbDragonrot.IsEnabled = false;
             }
 
-            if (_offset_parrymode == 0x0)
-            {
-                UpdateStatus("parrymode not found...", Brushes.Red);
-                LogToFile("parrymode not found...");
-                this.cbParryMode.IsEnabled = false;
-            }
-
             if (_offset_deathpenalties2 == 0x0)
             {
                 UpdateStatus("death penalties not found...", Brushes.Red);
@@ -836,12 +797,10 @@ namespace SekiroFpsUnlockAndMore
             _offset_deathpenalties1 = 0x0;
             _offset_deathpenalties2 = 0x0;
             _offset_deathscounter_routine = 0x0;
-            _offset_parrymode = 0x0;
             _codeCave_emblemupgrade = false;
             _offset_timescale = 0x0;
             _offset_timescale_player = 0x0;
             _offset_timescale_player_pointer_start = 0x0;
-            _patch_parrymode_disable = null;
             _patch_deathpenalties1_enable = null;
             _patch_deathpenalties2_enable = null;
             _memoryCaveGenerator.ClearCaves();
@@ -1167,32 +1126,6 @@ namespace SekiroFpsUnlockAndMore
         }
 
         /// <summary>
-        /// Patches the game's vitality damage, effectively enabling parry mode.
-        /// </summary>
-        /// <param name="showStatus">Determines if status should be updated from within method, default is true.</param>
-        private bool PatchParryMode(bool showStatus = true)
-        {
-            if (!this.cbParryMode.IsEnabled || _offset_parrymode == 0x0 || !CanPatchGame()) return false;
-            SetModeTag();
-            if (this.cbParryMode.IsChecked == true)
-            {
-                WriteBytes(_gameAccessHwndStatic, _offset_parrymode, GameData.PATCH_PARRYMODE_ENABLE);
-            }
-            else if (this.cbParryMode.IsChecked == false)
-            {
-                if (!_initialStartup)
-                {
-                    WriteBytes(_gameAccessHwndStatic, _offset_parrymode, _patch_parrymode_disable);
-                }
-                if (showStatus) UpdateStatus(DateTime.Now.ToString("HH:mm:ss") + " Game unpatched!", Brushes.White);
-                return false;
-            }
-
-            if (showStatus) UpdateStatus(DateTime.Now.ToString("HH:mm:ss") + " Game patched!", Brushes.Green);
-            return true;
-        }
-
-        /// <summary>
         /// Patches game's global speed.
         /// </summary>
         /// <param name="showStatus">Determines if status should be updated from within method, default is true.</param>
@@ -1300,8 +1233,7 @@ namespace SekiroFpsUnlockAndMore
                 PatchDragonrot(false),
                 PatchDeathPenalty(false),
                 PatchGameSpeed(false),
-                PatchPlayerSpeed(false),
-                PatchParryMode(false)
+                PatchPlayerSpeed(false)
             };
             if (results.IndexOf(true) > -1)
                 UpdateStatus(DateTime.Now.ToString("HH:mm:ss") + " Game patched!", Brushes.Green);
@@ -1848,12 +1780,6 @@ namespace SekiroFpsUnlockAndMore
                 PatchDeathPenaltyHidden();
         }
 
-        private void CbParryMode_Check_Handler(object sender, RoutedEventArgs e)
-        {
-            if (this.cbParryMode.IsEnabled)
-                PatchParryMode();
-        }
-
         private void CbEmblemUpgrade_Check_Handler(object sender, RoutedEventArgs e)
         {
             if (this.cbEmblemUpgrade.IsEnabled)
@@ -1947,7 +1873,6 @@ namespace SekiroFpsUnlockAndMore
         private const int MOD_CONTROL = 0x0002;
         private const uint VK_M = 0x004D;
         private const uint VK_P = 0x0050;
-        private const uint VK_L = 0x004C;
         private const uint PROCESS_ALL_ACCESS = 0x001F0FFF;
         private const int GWL_STYLE = -16;
         private const int GWL_EXSTYLE = -20;
