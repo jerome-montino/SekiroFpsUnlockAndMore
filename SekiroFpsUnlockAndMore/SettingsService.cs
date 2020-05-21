@@ -51,6 +51,8 @@ namespace SekiroFpsUnlockAndMore
         [XmlElement]
         public bool cbDeathPenalty { get; set; }
         [XmlElement]
+        public bool cbParryMode { get; set; }
+        [XmlElement]
         public int hiddenDPs { get; set; }
         [XmlElement]
         public bool cbEmblemUpgrade { get; set; }
